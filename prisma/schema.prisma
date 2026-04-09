@@ -1,0 +1,301 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ユーザー
+// ─────────────────────────────────────────────
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String
+  passwordHash String    @map("password_hash")
+  role         UserRole  @default(USER)
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  ownedContacts        Contact[]            @relation("ContactOwner")
+  createdContacts      Contact[]            @relation("ContactCreator")
+  updatedContacts      Contact[]            @relation("ContactUpdater")
+  ocrJobs              OcrJob[]
+  importJobs           ImportJob[]
+  interactionHistories InteractionHistory[]
+  auditLogs            AuditLog[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+
+  @@map("user_role")
+}
+
+// ─────────────────────────────────────────────
+// 会社マスタ（正規化用）
+// ─────────────────────────────────────────────
+model Company {
+  id             String    @id @default(uuid())
+  name           String
+  nameKana       String?   @map("name_kana")
+  nameEn         String?   @map("name_en")
+  nameNormalized String    @map("name_normalized")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  contacts Contact[]
+
+  @@index([nameNormalized])
+  @@index([name])
+  @@map("companies")
+}
+
+// ─────────────────────────────────────────────
+// 名刺（メインテーブル）
+// ─────────────────────────────────────────────
+model Contact {
+  id                    String    @id @default(uuid())
+  legacyNo              Int?      @map("legacy_no")
+
+  // 会社情報
+  companyId             String?   @map("company_id")
+  companyName           String    @map("company_name")
+  companyNameKana       String?   @map("company_name_kana")
+  companyNameEn         String?   @map("company_name_en")
+  companyNameNormalized String?   @map("company_name_normalized")
+
+  // 人物情報
+  department            String?
+  title                 String?
+  lastName              String?   @map("last_name")
+  firstName             String?   @map("first_name")
+  fullName              String?   @map("full_name")
+  lastNameKana          String?   @map("last_name_kana")
+  firstNameKana         String?   @map("first_name_kana")
+  fullNameKana          String?   @map("full_name_kana")
+  fullNameEn            String?   @map("full_name_en")
+  fullNameNormalized    String?   @map("full_name_normalized")
+
+  // 住所
+  postalCode            String?   @map("postal_code")
+  address               String?
+  country               String?   @default("Japan")
+
+  // 連絡先
+  tel                   String?
+  telNormalized         String?   @map("tel_normalized")
+  fax                   String?
+  mobile                String?
+  mobileNormalized      String?   @map("mobile_normalized")
+  email                 String?
+  emailNormalized       String?   @map("email_normalized")
+
+  // メモ
+  cardExchangePlace     String?   @map("card_exchange_place")
+  contactMemo           String?   @map("contact_memo")
+  note                  String?
+
+  // 分類・管理
+  category              String?
+  subCategory           String?   @map("sub_category")
+  status                String?   @default("active")
+  nextAction            String?   @map("next_action")
+  lastContactedAt       DateTime? @map("last_contacted_at") @db.Date
+  acquiredAt            DateTime? @map("acquired_at") @db.Date
+
+  // OCR・重複
+  ocrAccuracy           Decimal?  @map("ocr_accuracy") @db.Decimal(5, 2)
+  duplicateCandidates   Json?     @default("[]") @map("duplicate_candidates")
+
+  // メタ
+  ownerUserId           String?   @map("owner_user_id")
+  createdBy             String?   @map("created_by")
+  updatedBy             String?   @map("updated_by")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  deletedAt             DateTime? @map("deleted_at")
+
+  company              Company?             @relation(fields: [companyId], references: [id])
+  owner                User?                @relation("ContactOwner", fields: [ownerUserId], references: [id])
+  creator              User?                @relation("ContactCreator", fields: [createdBy], references: [id])
+  updater              User?                @relation("ContactUpdater", fields: [updatedBy], references: [id])
+  businessCards        BusinessCard[]
+  interactionHistories InteractionHistory[]
+
+  @@index([companyName])
+  @@index([fullName])
+  @@index([emailNormalized])
+  @@index([telNormalized])
+  @@index([mobileNormalized])
+  @@index([companyNameNormalized])
+  @@index([fullNameNormalized])
+  @@index([status])
+  @@index([lastContactedAt])
+  @@index([ownerUserId])
+  @@index([deletedAt])
+  @@map("contacts")
+}
+
+// ─────────────────────────────────────────────
+// 名刺画像（表・裏）
+// ─────────────────────────────────────────────
+model BusinessCard {
+  id        String   @id @default(uuid())
+  contactId String   @map("contact_id")
+  side      CardSide @default(FRONT)
+  filePath  String   @map("file_path")
+  fileName  String   @map("file_name")
+  mimeType  String   @map("mime_type")
+  fileSize  Int      @map("file_size")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@map("business_cards")
+}
+
+enum CardSide {
+  FRONT
+  BACK
+
+  @@map("card_side")
+}
+
+// ─────────────────────────────────────────────
+// OCRジョブ
+// ─────────────────────────────────────────────
+model OcrJob {
+  id               String    @id @default(uuid())
+  createdBy        String    @map("created_by")
+  status           OcrStatus @default(PENDING)
+  frontImagePath   String?   @map("front_image_path")
+  backImagePath    String?   @map("back_image_path")
+  rawOcrResult     Json?     @map("raw_ocr_result")
+  extractedFields  Json?     @map("extracted_fields")
+  confidenceScores Json?     @map("confidence_scores")
+  overallAccuracy  Decimal?  @map("overall_accuracy") @db.Decimal(5, 2)
+  resultContactId  String?   @map("result_contact_id")
+  errorMessage     String?   @map("error_message")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  creator User @relation(fields: [createdBy], references: [id])
+
+  @@index([createdBy])
+  @@index([status])
+  @@map("ocr_jobs")
+}
+
+enum OcrStatus {
+  PENDING
+  PROCESSING
+  DONE
+  ERROR
+
+  @@map("ocr_status")
+}
+
+// ─────────────────────────────────────────────
+// コンタクト履歴
+// ─────────────────────────────────────────────
+model InteractionHistory {
+  id              String    @id @default(uuid())
+  contactId       String    @map("contact_id")
+  contactedAt     DateTime  @map("contacted_at") @db.Date
+  interactionType String    @map("interaction_type")
+  title           String?
+  place           String?
+  memo            String?
+  nextAction      String?   @map("next_action")
+  status          String?
+  createdBy       String?   @map("created_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  creator User?   @relation(fields: [createdBy], references: [id])
+
+  @@index([contactId])
+  @@index([contactedAt])
+  @@map("interaction_histories")
+}
+
+// ─────────────────────────────────────────────
+// インポートジョブ
+// ─────────────────────────────────────────────
+model ImportJob {
+  id              String        @id @default(uuid())
+  createdBy       String        @map("created_by")
+  fileName        String        @map("file_name")
+  filePath        String        @map("file_path")
+  status          ImportStatus  @default(PENDING)
+  totalRows       Int?          @map("total_rows")
+  successRows     Int           @default(0) @map("success_rows")
+  errorRows       Int           @default(0) @map("error_rows")
+  skipRows        Int           @default(0) @map("skip_rows")
+  duplicatePolicy String        @default("skip") @map("duplicate_policy")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  creator User           @relation(fields: [createdBy], references: [id])
+  rows    ImportJobRow[]
+
+  @@index([createdBy])
+  @@map("import_jobs")
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  DONE
+  ERROR
+
+  @@map("import_status")
+}
+
+model ImportJobRow {
+  id           String   @id @default(uuid())
+  importJobId  String   @map("import_job_id")
+  rowNumber    Int      @map("row_number")
+  rawData      Json     @map("raw_data")
+  errorMessage String   @map("error_message")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  importJob ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+
+  @@index([importJobId])
+  @@map("import_job_rows")
+}
+
+// ─────────────────────────────────────────────
+// 監査ログ
+// ─────────────────────────────────────────────
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  action    String
+  tableName String   @map("table_name")
+  recordId  String?  @map("record_id")
+  oldValues Json?    @map("old_values")
+  newValues Json?    @map("new_values")
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([tableName])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

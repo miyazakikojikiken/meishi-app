@@ -1,0 +1,3 @@
+# next/image が使えないローカルファイル配信箇所
+src/app/cards/[id]/page.tsx
+src/app/cards/ocr/[jobId]/review/page.tsx
