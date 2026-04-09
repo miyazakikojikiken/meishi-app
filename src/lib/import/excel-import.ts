@@ -296,7 +296,7 @@ export async function processExcelImport(
           data: {
             importJobId: jobId,
             rowNumber,
-            rawData: rawRow as Record<string, unknown>,
+            rawData: rawRow as unknown as import("@prisma/client").Prisma.JsonObject,
             errorMessage: message,
           },
         })
