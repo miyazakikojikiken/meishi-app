@@ -261,7 +261,7 @@ export async function runOcrJob(
         frontImagePath: frontPath,
         backImagePath: backPath,
         rawOcrResult: { text: combinedText },
-        extractedFields: parsed.fields,
+        extractedFields: parsed.fields as object,
         confidenceScores: parsed.confidence,
         overallAccuracy: parsed.overallAccuracy,
       },
