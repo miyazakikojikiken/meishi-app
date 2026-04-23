@@ -20,17 +20,17 @@ export interface DuplicateCheckInput {
 
 /**
  * スコアリング基準:
- *   メール一致        : 100点
- *   電話一致          :  80点
- *   携帯一致          :  80点
- *   会社名+氏名一致   :  90点
- *   会社名カナ+氏名カナ:  70点
- *   会社名のみ一致    :  30点
- *   氏名のみ一致      :  20点
+ *   メール一致              : 100点
+ *   会社名+氏名一致         :  90点
+ *   電話+氏名一致           :  85点
+ *   携帯+氏名一致           :  85点
+ *   会社名のみ一致          :  30点
+ *   氏名のみ一致            :  20点
  *
- * 60点以上を重複候補として返す
+ * ※電話番号・携帯番号のみの一致は重複とみなさない
+ * 90点以上を重複候補として返す
  */
-export const DUPLICATE_THRESHOLD = 60
+export const DUPLICATE_THRESHOLD = 90
 
 export async function findDuplicateCandidates(
   input: DuplicateCheckInput
@@ -41,18 +41,16 @@ export async function findDuplicateCandidates(
   const normTel = normalizePhone(input.tel)
   const normMobile = normalizePhone(input.mobile)
 
-  // OR条件を動的に構築
-  
   const orConditions: any[] = []
 
   if (normEmail) {
     orConditions.push({ emailNormalized: normEmail })
   }
-  if (normTel && normTel.length >= 9) {
-    orConditions.push({ telNormalized: normTel })
+  if (normTel && normTel.length >= 9 && normName) {
+    orConditions.push({ telNormalized: normTel, fullNameNormalized: normName })
   }
-  if (normMobile && normMobile.length >= 9) {
-    orConditions.push({ mobileNormalized: normMobile })
+  if (normMobile && normMobile.length >= 9 && normName) {
+    orConditions.push({ mobileNormalized: normMobile, fullNameNormalized: normName })
   }
   if (normCompany && normName) {
     orConditions.push({
@@ -99,18 +97,22 @@ export async function findDuplicateCandidates(
     if (
       normTel &&
       normTel.length >= 9 &&
-      row.telNormalized === normTel
+      row.telNormalized === normTel &&
+      normName &&
+      row.fullNameNormalized === normName
     ) {
-      score += 80
-      reasons.push('電話番号一致')
+      score += 85
+      reasons.push('電話番号・氏名一致')
     }
     if (
       normMobile &&
       normMobile.length >= 9 &&
-      row.mobileNormalized === normMobile
+      row.mobileNormalized === normMobile &&
+      normName &&
+      row.fullNameNormalized === normName
     ) {
-      score += 80
-      reasons.push('携帯番号一致')
+      score += 85
+      reasons.push('携帯番号・氏名一致')
     }
     if (
       normCompany &&
