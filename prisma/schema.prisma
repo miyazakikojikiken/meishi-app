@@ -122,6 +122,7 @@ model Contact {
   updatedBy             String?   @map("updated_by")
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
+  histories ContactHistory[]
   deletedAt             DateTime? @map("deleted_at")
 
   company              Company?             @relation(fields: [companyId], references: [id])
@@ -298,4 +299,17 @@ model AuditLog {
   @@index([tableName])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model ContactHistory {
+  id         Int      @id @default(autoincrement())
+  contactId  String
+  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  date       DateTime?
+  place      String?
+  memo       String?
+  nextAction String?
+  status     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
