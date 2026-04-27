@@ -121,7 +121,7 @@ function parseWithLayout(rawText: string, blocks: BlockInfo[]): OcrParseResult {
   // フォントサイズの中央値を計算
   const fontSizes = blocks.map(b => b.fontSize).filter(s => s > 0).sort((a, b) => a - b)
   const medianFontSize = fontSizes[Math.floor(fontSizes.length / 2)] ?? 20
-  const largeFontThreshold = medianFontSize * 1.8
+  const largeFontThreshold = medianFontSize * 1.4
 
   const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean)
 
@@ -181,7 +181,8 @@ function parseWithLayout(rawText: string, blocks: BlockInfo[]): OcrParseResult {
     if (SKIP_PATTERNS.test(text)) continue
     if (TITLE_KEYWORDS.test(text) && text.length <= 10) continue
     if (DEPT_KEYWORDS.test(text)) continue
-    if (fields.companyName && text.includes(fields.companyName.replace(/\s/g, ''))) continue
+    // 会社名の完全一致のみスキップ（部分一致は除外しない）
+    if (fields.companyName && text === fields.companyName.replace(/\s/g, '')) continue
 
     // 大きいフォントの漢字（縦書き名刺の氏名）
     if (block.fontSize >= largeFontThreshold && /^[\u4E00-\u9FFF]{1,4}$/.test(text)) {
@@ -206,7 +207,7 @@ function parseWithLayout(rawText: string, blocks: BlockInfo[]): OcrParseResult {
   // rawText からも補完
   for (const line of lines) {
     if (SKIP_PATTERNS.test(line) || TITLE_KEYWORDS.test(line) || DEPT_KEYWORDS.test(line)) continue
-    if (fields.companyName && line.includes(fields.companyName)) continue
+    if (fields.companyName && line.trim() === fields.companyName.trim()) continue
 
     const trimmed = line.replace(/\s+/g, ' ').trim()
     const parts = trimmed.split(/[\s　]+/)
