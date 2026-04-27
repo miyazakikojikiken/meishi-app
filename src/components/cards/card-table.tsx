@@ -33,7 +33,7 @@ function SkeletonRows() {
     <>
       {Array.from({ length: 10 }).map((_, i) => (
         <tr key={i} className={i % 2 === 1 ? 'bg-gray-50/60' : 'bg-white'}>
-          {[200, 120, 140, 128, 176, 80, 80, 40].map((w, j) => (
+          {[200, 120, 140, 128, 176, 80, 80, 40, 40].map((w, j) => (
             <td key={j} className="px-4 py-3.5">
               <div
                 className="h-4 bg-gray-100 rounded animate-pulse"
@@ -57,6 +57,7 @@ export default function CardTable({ contacts, loading }: CardTableProps) {
           <thead>
             <tr className="bg-gray-800 text-white">
               {[
+                { label: '名刺',       w: 'w-20' },
                 { label: '会社名',     w: 'w-52' },
                 { label: '氏名',       w: 'w-28' },
                 { label: '役職・部署', w: 'w-36' },
@@ -80,7 +81,7 @@ export default function CardTable({ contacts, loading }: CardTableProps) {
               <SkeletonRows />
             ) : contacts.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center text-gray-400 py-16 text-sm">
+                <td colSpan={9} className="text-center text-gray-400 py-16 text-sm">
                   該当する名刺が見つかりませんでした
                 </td>
               </tr>
@@ -93,6 +94,29 @@ export default function CardTable({ contacts, loading }: CardTableProps) {
                   }`}
                   onClick={() => router.push(`/cards/${c.id}`)}
                 >
+                  <td className="px-3 py-2">
+                    {(() => {
+                      const frontCard = c.businessCards?.find(bc => bc.side === 'FRONT') ?? c.businessCards?.[0]
+                      if (frontCard) {
+                        const relPath = frontCard.filePath.split('uploads/').pop()
+                        return (
+                          <img
+                            src={`/api/files/${relPath}`}
+                            alt="名刺"
+                            className="w-16 h-10 object-cover rounded border border-gray-200 shadow-sm"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none'
+                            }}
+                          />
+                        )
+                      }
+                      return (
+                        <div className="w-16 h-10 rounded border border-dashed border-gray-200 bg-gray-50 flex items-center justify-center">
+                          <span className="text-gray-300 text-xs">なし</span>
+                        </div>
+                      )
+                    })()}
+                  </td>
                   <td className="px-4 py-3.5">
                     <span className="font-medium text-gray-900 line-clamp-1 block max-w-[200px]">
                       {c.companyName}

@@ -76,6 +76,7 @@ export interface Contact {
   createdAt: Date
   updatedAt: Date
   deletedAt: Date | null
+  businessCards?: { id: string; side: string; filePath: string }[]
 }
 
 export interface BusinessCard {

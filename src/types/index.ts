@@ -55,6 +55,7 @@ export interface OcrExtractedFields {
   fax?: string
   mobile?: string
   email?: string
+  nameReading?: string
 }
 
 export interface OcrConfidenceScores {
