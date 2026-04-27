@@ -118,6 +118,11 @@ function parseWithLayout(rawText: string, blocks: BlockInfo[]): OcrParseResult {
   const fields: OcrExtractedFields = {}
   const confidence: OcrConfidenceScores = {}
 
+  // デバッグログ
+  console.log('[OCR] rawText lines:', rawText.split('\n').filter(Boolean).slice(0, 20))
+  console.log('[OCR] blocks count:', blocks.length)
+  console.log('[OCR] blocks:', JSON.stringify(blocks.map(b => ({ text: b.text, fontSize: Math.round(b.fontSize) })).slice(0, 15)))
+
   // フォントサイズの中央値を計算
   const fontSizes = blocks.map(b => b.fontSize).filter(s => s > 0).sort((a, b) => a - b)
   const medianFontSize = fontSizes[Math.floor(fontSizes.length / 2)] ?? 20
