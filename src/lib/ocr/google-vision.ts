@@ -123,10 +123,18 @@ function parseWithLayout(rawText: string, blocks: BlockInfo[]): OcrParseResult {
   console.log('[OCR] blocks count:', blocks.length)
   console.log('[OCR] blocks:', JSON.stringify(blocks.map(b => ({ text: b.text, fontSize: Math.round(b.fontSize) })).slice(0, 15)))
 
-  // フォントサイズの中央値を計算
-  const fontSizes = blocks.map(b => b.fontSize).filter(s => s > 0).sort((a, b) => a - b)
+  // フォントサイズの計算：短いテキスト（10文字以下）のブロックのみ対象
+  // 長いブロックは複数行が結合されてfontSizeが不正確なため除外
+  const shortBlockFontSizes = blocks
+    .filter(b => b.text.replace(/\s/g, '').length <= 10 && b.fontSize > 0)
+    .map(b => b.fontSize)
+    .sort((a, b) => a - b)
+  const allFontSizes = blocks.map(b => b.fontSize).filter(s => s > 0).sort((a, b) => a - b)
+  const fontSizes = shortBlockFontSizes.length > 0 ? shortBlockFontSizes : allFontSizes
   const medianFontSize = fontSizes[Math.floor(fontSizes.length / 2)] ?? 20
-  const largeFontThreshold = medianFontSize * 1.4
+  // 閾値を下げて検出しやすくする（中央値の1.2倍以上を大きいフォントとみなす）
+  const largeFontThreshold = medianFontSize * 1.2
+  console.log('[OCR] medianFontSize:', medianFontSize, 'largeFontThreshold:', largeFontThreshold)
 
   const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean)
 
