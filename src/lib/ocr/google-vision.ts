@@ -232,21 +232,37 @@ function parseWithLayout(rawText: string, blocks: BlockInfo[]): OcrParseResult {
   }
 
   // 縦書き名刺の場合：大きいフォントの候補を2つ結合して姓名を作る
-  const largeCandidates = nameCandidates
-    .filter(c => c.score >= 0.88)
-    .sort((a, b) => b.score - a.score)
+  // 縦書き名刺対応: 大きいフォントの漢字ブロックを複数結合して氏名を作る
+  const largeKanjiBlocks = blocks.filter(b => {
+    const t = b.text.replace(/\s/g, '')
+    return (
+      b.fontSize >= largeFontThreshold &&
+      /^[\u4E00-\u9FFF]{1,3}$/.test(t) &&
+      !SKIP_PATTERNS.test(t) &&
+      !TITLE_KEYWORDS.test(t) &&
+      !DEPT_KEYWORDS.test(t) &&
+      !(fields.companyName && fields.companyName.replace(/\s/g, '') === t)
+    )
+  }).sort((a, b) => b.fontSize - a.fontSize)
 
-  if (largeCandidates.length >= 2) {
-    // 上位2候補が単漢字〜2文字ずつなら結合
-    const c1 = largeCandidates[0].text.replace(/\s/g, '')
-    const c2 = largeCandidates[1].text.replace(/\s/g, '')
-    if (c1.length <= 2 && c2.length <= 3 && /^[\u4E00-\u9FFF]+$/.test(c1 + c2)) {
-      fields.fullName = c1 + ' ' + c2
-      fields.lastName = c1
-      fields.firstName = c2
-      confidence.fullName = 0.88
-      confidence.lastName = 0.88
-      confidence.firstName = 0.88
+  console.log('[OCR] largeKanjiBlocks:', JSON.stringify(largeKanjiBlocks.map(b => ({ text: b.text, fontSize: Math.round(b.fontSize) }))))
+
+  if (largeKanjiBlocks.length >= 2) {
+    // 上位2ブロックを姓・名として結合
+    const lastName = largeKanjiBlocks[0].text.replace(/\s/g, '')
+    const firstName = largeKanjiBlocks[1].text.replace(/\s/g, '')
+    fields.fullName = lastName + ' ' + firstName
+    fields.lastName = lastName
+    fields.firstName = firstName
+    confidence.fullName = 0.90
+    confidence.lastName = 0.90
+    confidence.firstName = 0.90
+    console.log('[OCR] 縦書き氏名結合:', fields.fullName)
+  } else if (largeKanjiBlocks.length === 1) {
+    // 1ブロックのみの場合はそのまま氏名候補に追加
+    const text = largeKanjiBlocks[0].text.replace(/\s/g, '')
+    if (!nameCandidates.some(c => c.text.replace(/\s/g, '') === text)) {
+      nameCandidates.push({ text, score: 0.88 })
     }
   }
 
