@@ -256,11 +256,21 @@ function parseWithLayout(rawText: string, blocks: BlockInfo[]): OcrParseResult {
   console.log('[OCR] largeKanjiBlocks:', JSON.stringify(largeKanjiBlocks.map(b => ({ text: b.text, fontSize: Math.round(b.fontSize) }))))
 
   if (largeKanjiBlocks.length >= 2) {
-    // フォントサイズが最大のブロックを姓、2番目を名とする
-    // （名刺では会社名と同じフォントで姓が書かれることが多い）
-    const sorted = [...largeKanjiBlocks].sort((a, b) => b.fontSize - a.fontSize)
-    const lastName = sorted[0].text.replace(/\s/g, '')
-    const firstName = sorted[1].text.replace(/\s/g, '')
+    // 姓・名の決定：文字数が多い方を姓とする（岡元=2文字 > 湧=1文字）
+    // 同文字数の場合はfontSizeが大きい方を姓とする
+    const top2 = [...largeKanjiBlocks].slice(0, 2)
+    const t0 = top2[0].text.replace(/\s/g, '')
+    const t1 = top2[1].text.replace(/\s/g, '')
+    let lastName: string, firstName: string
+    if (t0.length !== t1.length) {
+      // 文字数が多い方を姓
+      if (t0.length > t1.length) { lastName = t0; firstName = t1 }
+      else { lastName = t1; firstName = t0 }
+    } else {
+      // 同文字数ならfontSizeが大きい方を姓
+      if (top2[0].fontSize >= top2[1].fontSize) { lastName = t0; firstName = t1 }
+      else { lastName = t1; firstName = t0 }
+    }
     fields.fullName = lastName + ' ' + firstName
     fields.lastName = lastName
     fields.firstName = firstName
