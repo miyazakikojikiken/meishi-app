@@ -251,26 +251,16 @@ function parseWithLayout(rawText: string, blocks: BlockInfo[]): OcrParseResult {
       !DEPT_KEYWORDS.test(t) &&
       !(fields.companyName && fields.companyName.replace(/\s/g, '') === t)
     )
-  }).sort((a, b) => b.fontSize - a.fontSize)
+  }) // 検出順を維持（縦書き名刺では右から左の順序）
 
   console.log('[OCR] largeKanjiBlocks:', JSON.stringify(largeKanjiBlocks.map(b => ({ text: b.text, fontSize: Math.round(b.fontSize) }))))
 
   if (largeKanjiBlocks.length >= 2) {
-    // 姓・名の決定：文字数が多い方を姓とする（岡元=2文字 > 湧=1文字）
-    // 同文字数の場合はfontSizeが大きい方を姓とする
-    const top2 = [...largeKanjiBlocks].slice(0, 2)
-    const t0 = top2[0].text.replace(/\s/g, '')
-    const t1 = top2[1].text.replace(/\s/g, '')
-    let lastName: string, firstName: string
-    if (t0.length !== t1.length) {
-      // 文字数が多い方を姓
-      if (t0.length > t1.length) { lastName = t0; firstName = t1 }
-      else { lastName = t1; firstName = t0 }
-    } else {
-      // 同文字数ならfontSizeが大きい方を姓
-      if (top2[0].fontSize >= top2[1].fontSize) { lastName = t0; firstName = t1 }
-      else { lastName = t1; firstName = t0 }
-    }
+    // 姓・名の決定：検出順（画像内の位置順）を使用
+    // 縦書き名刺では右から左に読むため、最初に検出されたブロックが姓
+    // largeKanjiBlocksはblocks配列の元の順序を保持（fontSizeソートを削除）
+    const lastName = largeKanjiBlocks[0].text.replace(/\s/g, '')
+    const firstName = largeKanjiBlocks[1].text.replace(/\s/g, '')
     fields.fullName = lastName + ' ' + firstName
     fields.lastName = lastName
     fields.firstName = firstName
