@@ -170,7 +170,15 @@ function parseWithLayout(rawText: string, blocks: BlockInfo[]): OcrParseResult {
     }
     if (!fields.address) {
       const m = line.match(/(?:東京都|大阪府|京都府|北海道|.{2,3}[都道府県]).{3,}/)
-      if (m) { fields.address = line; confidence.address = 0.75 }
+      if (m) {
+        // 住所から郵便番号・「本社」「支社」などのプレフィックスを除去
+        let addr = line
+          .replace(/〒?\s*\d{3}[-\s]?\d{4}\s*/g, '')  // 郵便番号を除去
+          .replace(/^(本社|支社|支店|本部|営業所|事務所)\s*/g, '') // プレフィックスを除去
+          .trim()
+        fields.address = addr
+        confidence.address = 0.75
+      }
     }
     if (!fields.companyName) {
       if (line.match(/株式会社|有限会社|合同会社|（株）|\(株\)|Co\.,?\s*Ltd|Inc\.|Corp\.|LLC/i)) {
