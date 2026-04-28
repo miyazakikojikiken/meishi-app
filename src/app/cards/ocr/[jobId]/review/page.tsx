@@ -143,8 +143,14 @@ export default function OcrReviewPage() {
   }
 
   // ─── 完了・確認画面 ───
-  const frontRelPath = job.frontImagePath?.split('uploads/').pop()
-  const backRelPath = job.backImagePath?.split('uploads/').pop()
+  // UPLOAD_DIRがどんなパスでも正しくURLに変換
+  const toImageUrl = (filePath: string | null | undefined) => {
+    if (!filePath) return null
+    const match = filePath.replace(/\\/g, '/').match(/uploads\/(.+)$/)
+    return match ? `/api/files/${match[1]}` : null
+  }
+  const frontImageUrl = toImageUrl(job.frontImagePath)
+  const backImageUrl = toImageUrl(job.backImagePath)
 
   return (
     <div className="max-w-5xl mx-auto space-y-4">
@@ -212,27 +218,27 @@ export default function OcrReviewPage() {
             <CardTitle className="text-base">名刺画像</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {frontRelPath && (
+            {frontImageUrl && (
               <div>
                 <p className="text-xs text-gray-400 mb-1.5">表面</p>
                 <img
-                  src={`/api/files/${frontRelPath}`}
+                  src={frontImageUrl}
                   alt="名刺表面"
                   className="w-full border rounded-lg object-contain bg-gray-50 max-h-56"
                 />
               </div>
             )}
-            {backRelPath && (
+            {backImageUrl && (
               <div>
                 <p className="text-xs text-gray-400 mb-1.5">裏面</p>
                 <img
-                  src={`/api/files/${backRelPath}`}
+                  src={backImageUrl}
                   alt="名刺裏面"
                   className="w-full border rounded-lg object-contain bg-gray-50 max-h-56"
                 />
               </div>
             )}
-            {!frontRelPath && !backRelPath && (
+            {!frontImageUrl && !backImageUrl && (
               <p className="text-sm text-gray-400 text-center py-8">
                 画像プレビューなし
               </p>
