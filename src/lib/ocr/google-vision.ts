@@ -249,17 +249,23 @@ function parseWithLayout(rawText: string, blocks: BlockInfo[]): OcrParseResult {
 
   // 縦書き名刺の場合：大きいフォントの候補を2つ結合して姓名を作る
   // 縦書き名刺対応: 大きいフォントの漢字ブロックを複数結合して氏名を作る
-  const largeKanjiBlocks = blocks.filter(b => {
+  // 縦書き名刺の氏名検出：短い漢字ブロックのうちfontSizeが大きいものを対象
+  const kanjiNameBlocks = blocks.filter(b => {
     const t = b.text.replace(/\s/g, '')
     return (
-      b.fontSize >= largeFontThreshold &&
-      /^[\u4E00-\u9FFF]{1,3}$/.test(t) &&
+      /^[\u4E00-\u9FFF]{1,4}$/.test(t) &&
       !SKIP_PATTERNS.test(t) &&
       !TITLE_KEYWORDS.test(t) &&
       !DEPT_KEYWORDS.test(t) &&
       !(fields.companyName && fields.companyName.replace(/\s/g, '') === t)
     )
-  }) // 検出順を維持（縦書き名刺では右から左の順序）
+  })
+  // fontSizeの上位2つを姓・名の候補とする
+  const largeKanjiBlocks = [...kanjiNameBlocks]
+    .sort((a, b) => b.fontSize - a.fontSize)
+    .slice(0, 2)
+    // 元の検出順に戻す（縦書きは右から左）
+    .sort((a, b) => kanjiNameBlocks.indexOf(a) - kanjiNameBlocks.indexOf(b))
 
   console.log('[OCR] largeKanjiBlocks:', JSON.stringify(largeKanjiBlocks.map(b => ({ text: b.text, fontSize: Math.round(b.fontSize) }))))
 
