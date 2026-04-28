@@ -283,11 +283,38 @@ function parseWithLayout(rawText: string, blocks: BlockInfo[]): OcrParseResult {
     confidence.firstName = 0.90
     console.log('[OCR] 縦書き氏名結合:', fields.fullName)
   } else if (largeKanjiBlocks.length === 1) {
-    // 1ブロックのみの場合はそのまま氏名候補に追加
+    // 1ブロックのみ：そのまま氏名として使用し、姓名を分割
     const text = largeKanjiBlocks[0].text.replace(/\s/g, '')
-    if (!nameCandidates.some(c => c.text.replace(/\s/g, '') === text)) {
-      nameCandidates.push({ text, score: 0.88 })
+    fields.fullName = text
+    confidence.fullName = 0.88
+    // 姓名分割：読み仮名があれば文字数から推測、なければ先頭2文字を姓とする
+    if (fields.nameReading) {
+      const readingParts = fields.nameReading.trim().split(/[\s　]+/)
+      if (readingParts.length === 2) {
+        // 読み仮名の文字数比率で漢字を分割
+        const total = readingParts[0].length + readingParts[1].length
+        const lastNameLen = Math.round(text.length * readingParts[0].length / total)
+        const l = Math.max(1, Math.min(lastNameLen, text.length - 1))
+        fields.lastName = text.slice(0, l)
+        fields.firstName = text.slice(l)
+      } else {
+        fields.lastName = text.slice(0, 2)
+        fields.firstName = text.slice(2)
+      }
+    } else if (text.length === 3) {
+      // 3文字：先頭2文字を姓（岡元湧 → 岡元/湧）
+      fields.lastName = text.slice(0, 2)
+      fields.firstName = text.slice(2)
+    } else if (text.length === 4) {
+      // 4文字：先頭2文字を姓（山田太郎 → 山田/太郎）
+      fields.lastName = text.slice(0, 2)
+      fields.firstName = text.slice(2)
+    } else {
+      fields.lastName = text
     }
+    confidence.lastName = 0.75
+    confidence.firstName = 0.75
+    console.log('[OCR] 1ブロック氏名:', fields.fullName, '→', fields.lastName, '/', fields.firstName)
   }
 
   // まだ氏名が確定していない場合
