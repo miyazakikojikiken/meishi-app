@@ -120,6 +120,8 @@ export async function PATCH(
     const updateData: any = {
       ...fields,
       email,
+      // 空文字はnullに変換（フィールド削除に対応）
+      nextAction: fields.nextAction === '' ? null : fields.nextAction,
       updatedBy: session.id,
     }
     if (fields.companyName !== undefined) {
