@@ -344,7 +344,7 @@ function HistoryItem({ h, onRefresh }: { h: InteractionHistory; onRefresh: () =>
         {/* 2カラムレイアウト */}
         <div className="flex">
           {/* 左カラム：日時・区分 */}
-          <div className="w-36 shrink-0 px-4 py-4 border-r border-gray-100 space-y-3">
+          <div className="w-24 shrink-0 px-3 py-4 border-r border-gray-100 space-y-3">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">日時</p>
               <p className="text-sm font-semibold text-gray-800">{formatDate(h.contactedAt)}</p>
