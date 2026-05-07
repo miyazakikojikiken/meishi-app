@@ -10,6 +10,7 @@ const UpdateSchema = z.object({
   title: z.string().max(255).optional().nullable(),
   place: z.string().max(255).optional().nullable(),
   memo: z.string().optional().nullable(),
+  participants: z.string().optional().nullable(),
   nextAction: z.string().optional().nullable(),
   status: z.string().max(50).optional().nullable(),
 })

@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/utils'
 import {
   ArrowLeft, Edit, Trash2, Plus, Phone, Mail,
   MapPin, Clock, Loader2, Building2, User, ChevronRight,
+  Pencil, Users, X, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { INTERACTION_TYPE_OPTIONS, STATUS_OPTIONS } from '@/types'
 
@@ -205,65 +206,210 @@ const TYPE_COLORS: Record<string, string> = {
   その他: 'bg-gray-100 text-gray-700 border-gray-200',
 }
 
-function HistoryItem({ h }: { h: InteractionHistory }) {
+function HistoryItem({ h, onRefresh }: { h: InteractionHistory; onRefresh: () => void }) {
   const cls = TYPE_COLORS[h.interactionType] ?? TYPE_COLORS['その他']
   const [expanded, setExpanded] = useState(false)
-  const isLong = (h.memo?.length ?? 0) > 80
+  const [editing, setEditing] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const isLong = (h.memo?.length ?? 0) > 120
+
+  const [form, setForm] = useState({
+    contactedAt: h.contactedAt.slice(0, 10),
+    interactionType: h.interactionType,
+    title: h.title ?? '',
+    place: h.place ?? '',
+    participants: h.participants ?? '',
+    memo: h.memo ?? '',
+    nextAction: h.nextAction ?? '',
+  })
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/interactions/${h.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) throw new Error('保存失敗')
+      setEditing(false)
+      onRefresh()
+    } finally { setSaving(false) }
+  }
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/interactions/${h.id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('削除失敗')
+      onRefresh()
+    } finally { setDeleting(false); setDeleteConfirm(false) }
+  }
+
+  const inputClass = "w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+  const textareaClass = "w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-none"
+
+  if (editing) {
+    return (
+      <div className="relative pl-6 pb-5 last:pb-0">
+        <div className="absolute left-2 top-5 bottom-0 w-px bg-gray-100" />
+        <div className="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-blue-500 border-2 border-blue-300" />
+        <div className="bg-white rounded-xl border border-blue-200 p-4 shadow-sm space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">日付</label>
+              <input type="date" value={form.contactedAt}
+                onChange={e => setForm(p => ({ ...p, contactedAt: e.target.value }))}
+                className={inputClass} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">区分</label>
+              <select value={form.interactionType}
+                onChange={e => setForm(p => ({ ...p, interactionType: e.target.value }))}
+                className={inputClass}>
+                {INTERACTION_TYPE_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">タイトル</label>
+            <input type="text" value={form.title}
+              onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+              className={inputClass} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">場所</label>
+            <input type="text" value={form.place}
+              onChange={e => setForm(p => ({ ...p, place: e.target.value }))}
+              className={inputClass} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">出席者</label>
+            <input type="text" value={form.participants}
+              onChange={e => setForm(p => ({ ...p, participants: e.target.value }))}
+              className={inputClass} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">内容・メモ</label>
+            <textarea rows={5} value={form.memo}
+              onChange={e => setForm(p => ({ ...p, memo: e.target.value }))}
+              className={textareaClass} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">次回アクション</label>
+            <input type="text" value={form.nextAction}
+              onChange={e => setForm(p => ({ ...p, nextAction: e.target.value }))}
+              className={inputClass} />
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 size={13} className="animate-spin mr-1" /> : null}保存
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setEditing(false)}>キャンセル</Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative pl-6 pb-5 last:pb-0">
-      {/* 縦ライン */}
       <div className="absolute left-2 top-5 bottom-0 w-px bg-gray-100 last:hidden" />
-      {/* ドット */}
       <div className="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center">
         <div className="w-2 h-2 rounded-full bg-gray-400" />
       </div>
-      <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-2">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* ヘッダー */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-gray-700">
-              {formatDate(h.contactedAt)}
-            </span>
-            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${cls}`}>
+            <span className="text-sm font-bold text-gray-800">{formatDate(h.contactedAt)}</span>
+            <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${cls}`}>
               {h.interactionType}
             </span>
-          </div>
-          {h.creator && (
-            <span className="text-xs text-gray-400 shrink-0">{h.creator.name}</span>
-          )}
-        </div>
-        {h.title && (
-          <p className="text-sm font-medium text-gray-900 mt-1.5">{h.title}</p>
-        )}
-        {h.place && (
-          <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-            <MapPin size={10} />{h.place}
-          </p>
-        )}
-        {h.participants && (
-          <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-            <span className="font-medium text-gray-400">出席者:</span> {h.participants}
-          </p>
-        )}
-        {h.memo && (
-          <div className="mt-2">
-            <p className={`text-sm text-gray-600 whitespace-pre-wrap leading-relaxed ${!expanded && isLong ? 'line-clamp-3' : ''}`}>
-              {h.memo}
-            </p>
-            {isLong && (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="text-xs text-blue-600 hover:underline mt-1"
-              >
-                {expanded ? '閉じる' : '続きを見る'}
-              </button>
+            {h.title && (
+              <span className="text-sm font-semibold text-gray-700">{h.title}</span>
             )}
           </div>
-        )}
-        {h.nextAction && (
-          <div className="mt-2.5 px-3 py-1.5 bg-blue-50 rounded-lg">
-            <p className="text-xs text-blue-700 font-medium flex items-center gap-1">
-              <ChevronRight size={12} />次回: {h.nextAction}
-            </p>
+          <div className="flex items-center gap-1 shrink-0">
+            {h.creator && (
+              <span className="text-xs text-gray-400 mr-1">{h.creator.name}</span>
+            )}
+            <button onClick={() => setEditing(true)}
+              className="p-1.5 rounded hover:bg-gray-200 text-gray-400 hover:text-blue-600 transition-colors"
+              title="編集">
+              <Pencil size={13} />
+            </button>
+            <button onClick={() => setDeleteConfirm(true)}
+              className="p-1.5 rounded hover:bg-gray-200 text-gray-400 hover:text-red-500 transition-colors"
+              title="削除">
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* 詳細グリッド */}
+        <div className="px-4 py-3">
+          {(h.place || h.participants) && (
+            <div className="grid grid-cols-2 gap-3 mb-3 pb-3 border-b border-gray-100">
+              {h.place && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">場所</p>
+                  <p className="text-sm text-gray-700 flex items-center gap-1">
+                    <MapPin size={11} className="text-gray-400 shrink-0" />{h.place}
+                  </p>
+                </div>
+              )}
+              {h.participants && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">出席者</p>
+                  <p className="text-sm text-gray-700 flex items-center gap-1">
+                    <Users size={11} className="text-gray-400 shrink-0" />{h.participants}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {h.memo && (
+            <div className="mb-2">
+              <p className={`text-sm text-gray-600 leading-relaxed whitespace-pre-wrap ${!expanded && isLong ? 'line-clamp-4' : ''}`}>
+                {h.memo}
+              </p>
+              {isLong && (
+                <button onClick={() => setExpanded(!expanded)}
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-1 font-medium">
+                  {expanded ? <><ChevronUp size={12} />閉じる</> : <><ChevronDown size={12} />続きを見る</>}
+                </button>
+              )}
+            </div>
+          )}
+
+          {h.nextAction && (
+            <div className="mt-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-100">
+              <p className="text-xs text-blue-700 font-medium flex items-center gap-1">
+                <ChevronRight size={12} />次回アクション: {h.nextAction}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* 削除確認 */}
+        {deleteConfirm && (
+          <div className="px-4 py-3 bg-red-50 border-t border-red-100 flex items-center justify-between gap-3">
+            <p className="text-sm text-red-700">このコンタクト履歴を削除しますか？</p>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => setDeleteConfirm(false)}>
+                キャンセル
+              </Button>
+              <button onClick={handleDelete} disabled={deleting}
+                className="px-3 py-1.5 text-xs font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-1">
+                {deleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}削除
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -567,7 +713,7 @@ export default function CardDetailPage() {
               ) : (
                 <div className="max-h-[500px] overflow-y-auto pr-1">
                   {contact.interactionHistories.map(h => (
-                    <HistoryItem key={h.id} h={h} />
+                    <HistoryItem key={h.id} h={h} onRefresh={load} />
                   ))}
                 </div>
               )}
