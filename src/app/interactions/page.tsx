@@ -2,11 +2,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Input, Label, Select, Badge, Skeleton } from '@/components/ui/index'
+import { Input, Label, Select, Skeleton } from '@/components/ui/index'
 import Pagination from '@/components/common/pagination'
 import { formatDate } from '@/lib/utils'
 import { INTERACTION_TYPE_OPTIONS } from '@/types'
-import { History, Search, RotateCcw, MapPin, ExternalLink } from 'lucide-react'
+import { History, Search, RotateCcw, MapPin, ExternalLink, ChevronDown, ChevronUp, Users } from 'lucide-react'
 
 interface Interaction {
   id: string
@@ -15,6 +15,7 @@ interface Interaction {
   title: string | null
   place: string | null
   memo: string | null
+  participants: string | null
   nextAction: string | null
   status: string | null
   contact: {
@@ -28,17 +29,109 @@ interface Interaction {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  商談: 'bg-blue-100 text-blue-800',
-  訪問: 'bg-green-100 text-green-800',
-  電話: 'bg-yellow-100 text-yellow-800',
-  メール: 'bg-purple-100 text-purple-800',
-  展示会: 'bg-orange-100 text-orange-800',
-  オンライン: 'bg-cyan-100 text-cyan-800',
-  その他: 'bg-gray-100 text-gray-700',
+  商談: 'bg-blue-100 text-blue-700 border-blue-200',
+  訪問: 'bg-green-100 text-green-700 border-green-200',
+  電話: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  メール: 'bg-purple-100 text-purple-700 border-purple-200',
+  展示会: 'bg-orange-100 text-orange-700 border-orange-200',
+  オンライン: 'bg-cyan-100 text-cyan-700 border-cyan-200',
+  その他: 'bg-gray-100 text-gray-600 border-gray-200',
+}
+
+function InteractionCard({ h }: { h: Interaction }) {
+  const router = useRouter()
+  const [expanded, setExpanded] = useState(false)
+  const isLong = (h.memo?.length ?? 0) > 80
+  const typeColor = TYPE_COLORS[h.interactionType] ?? TYPE_COLORS['その他']
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+      {/* ヘッダー */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-bold text-gray-800">{formatDate(h.contactedAt)}</span>
+          <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${typeColor}`}>
+            {h.interactionType}
+          </span>
+          <button
+            className="text-sm font-semibold text-blue-700 hover:underline"
+            onClick={() => router.push(`/cards/${h.contact.id}`)}
+          >
+            {h.contact.companyName}
+          </button>
+          {h.contact.fullName && (
+            <span className="text-sm text-gray-600">{h.contact.fullName}</span>
+          )}
+          {(h.contact.title || h.contact.department) && (
+            <span className="text-xs text-gray-400">
+              {[h.contact.title, h.contact.department].filter(Boolean).join(' / ')}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {h.creator && (
+            <span className="text-xs text-gray-400">{h.creator.name}</span>
+          )}
+          <button
+            className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
+            onClick={() => router.push(`/cards/${h.contact.id}`)}
+            title="名刺を開く"
+          >
+            <ExternalLink size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* 本文 */}
+      <div className="px-4 py-3 space-y-2">
+        {h.title && (
+          <p className="text-sm font-semibold text-gray-800">{h.title}</p>
+        )}
+
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
+          {h.place && (
+            <p className="text-xs text-gray-500 flex items-center gap-1">
+              <MapPin size={11} className="text-gray-400" />
+              {h.place}
+            </p>
+          )}
+          {h.participants && (
+            <p className="text-xs text-gray-500 flex items-center gap-1">
+              <Users size={11} className="text-gray-400" />
+              {h.participants}
+            </p>
+          )}
+        </div>
+
+        {h.memo && (
+          <div>
+            <p className={`text-sm text-gray-600 leading-relaxed whitespace-pre-wrap ${!expanded && isLong ? 'line-clamp-3' : ''}`}>
+              {h.memo}
+            </p>
+            {isLong && (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-1 font-medium"
+              >
+                {expanded ? <><ChevronUp size={12} />閉じる</> : <><ChevronDown size={12} />続きを見る</>}
+              </button>
+            )}
+          </div>
+        )}
+
+        {h.nextAction && (
+          <div className="mt-1 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
+            <p className="text-xs text-blue-700 font-medium">
+              → 次回アクション: {h.nextAction}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default function InteractionsPage() {
-  const router = useRouter()
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
@@ -81,16 +174,10 @@ export default function InteractionsPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  function handleSearch() {
-    setApplied(filters)
-    setPage(1)
-  }
-
+  function handleSearch() { setApplied(filters); setPage(1) }
   function handleReset() {
     const empty = { companyName: '', type: '', from: '', to: '' }
-    setFilters(empty)
-    setApplied(empty)
-    setPage(1)
+    setFilters(empty); setApplied(empty); setPage(1)
   }
 
   return (
@@ -101,7 +188,7 @@ export default function InteractionsPage() {
       </h1>
 
       {/* フィルター */}
-      <div className="bg-white border rounded-lg p-4 space-y-3">
+      <div className="bg-white border rounded-xl p-4 space-y-3 shadow-sm">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="space-y-1">
             <Label className="text-xs text-gray-500">会社名</Label>
@@ -126,40 +213,31 @@ export default function InteractionsPage() {
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-gray-500">期間（開始）</Label>
-            <Input
-              type="date"
-              value={filters.from}
-              onChange={(e) => setFilters((p) => ({ ...p, from: e.target.value }))}
-            />
+            <Input type="date" value={filters.from}
+              onChange={(e) => setFilters((p) => ({ ...p, from: e.target.value }))} />
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-gray-500">期間（終了）</Label>
-            <Input
-              type="date"
-              value={filters.to}
-              onChange={(e) => setFilters((p) => ({ ...p, to: e.target.value }))}
-            />
+            <Input type="date" value={filters.to}
+              onChange={(e) => setFilters((p) => ({ ...p, to: e.target.value }))} />
           </div>
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={handleSearch}>
-            <Search size={14} className="mr-1.5" />
-            絞り込む
+            <Search size={14} className="mr-1.5" />絞り込む
           </Button>
           <Button size="sm" variant="outline" onClick={handleReset}>
-            <RotateCcw size={14} className="mr-1.5" />
-            リセット
+            <RotateCcw size={14} className="mr-1.5" />リセット
           </Button>
         </div>
       </div>
 
       <p className="text-sm text-gray-500">{total}件</p>
 
-      {/* タイムライン */}
       {loading ? (
         <div className="space-y-3">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full" />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full rounded-xl" />
           ))}
         </div>
       ) : interactions.length === 0 ? (
@@ -169,84 +247,7 @@ export default function InteractionsPage() {
       ) : (
         <div className="space-y-3">
           {interactions.map((h) => (
-            <div
-              key={h.id}
-              className="bg-white border rounded-lg p-4 hover:border-blue-300 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="flex items-start gap-3 min-w-0">
-                  {/* 日付・区分 */}
-                  <div className="shrink-0 text-center">
-                    <p className="text-sm font-bold text-gray-800">
-                      {formatDate(h.contactedAt)}
-                    </p>
-                    <span
-                      className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium mt-1 ${
-                        TYPE_COLORS[h.interactionType] ?? 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {h.interactionType}
-                    </span>
-                  </div>
-
-                  {/* 本文 */}
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        className="text-sm font-semibold text-blue-700 hover:underline"
-                        onClick={() => router.push(`/cards/${h.contact.id}`)}
-                      >
-                        {h.contact.companyName}
-                      </button>
-                      {h.contact.fullName && (
-                        <span className="text-sm text-gray-600">
-                          {h.contact.fullName}
-                        </span>
-                      )}
-                      {(h.contact.title || h.contact.department) && (
-                        <span className="text-xs text-gray-400">
-                          {[h.contact.title, h.contact.department]
-                            .filter(Boolean)
-                            .join(' / ')}
-                        </span>
-                      )}
-                    </div>
-
-                    {h.title && (
-                      <p className="text-sm font-medium text-gray-800 mt-0.5">{h.title}</p>
-                    )}
-                    {h.place && (
-                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                        <MapPin size={10} />
-                        {h.place}
-                      </p>
-                    )}
-                    {h.memo && (
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{h.memo}</p>
-                    )}
-                    {h.nextAction && (
-                      <p className="text-xs text-blue-700 mt-1.5 flex items-center gap-1">
-                        <span className="font-medium">→ 次回:</span> {h.nextAction}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* 右側 */}
-                <div className="flex items-center gap-2 shrink-0">
-                  {h.creator && (
-                    <span className="text-xs text-gray-400">{h.creator.name}</span>
-                  )}
-                  <button
-                    className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
-                    title="名刺を開く"
-                    onClick={() => router.push(`/cards/${h.contact.id}`)}
-                  >
-                    <ExternalLink size={14} />
-                  </button>
-                </div>
-              </div>
-            </div>
+            <InteractionCard key={h.id} h={h} />
           ))}
         </div>
       )}
