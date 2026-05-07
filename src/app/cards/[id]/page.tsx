@@ -200,6 +200,8 @@ const TYPE_COLORS: Record<string, string> = {
 
 function HistoryItem({ h }: { h: InteractionHistory }) {
   const cls = TYPE_COLORS[h.interactionType] ?? TYPE_COLORS['その他']
+  const [expanded, setExpanded] = useState(false)
+  const isLong = (h.memo?.length ?? 0) > 80
   return (
     <div className="relative pl-6 pb-5 last:pb-0">
       {/* 縦ライン */}
@@ -231,9 +233,19 @@ function HistoryItem({ h }: { h: InteractionHistory }) {
           </p>
         )}
         {h.memo && (
-          <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap leading-relaxed">
-            {h.memo}
-          </p>
+          <div className="mt-2">
+            <p className={`text-sm text-gray-600 whitespace-pre-wrap leading-relaxed ${!expanded && isLong ? 'line-clamp-3' : ''}`}>
+              {h.memo}
+            </p>
+            {isLong && (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="text-xs text-blue-600 hover:underline mt-1"
+              >
+                {expanded ? '閉じる' : '続きを見る'}
+              </button>
+            )}
+          </div>
         )}
         {h.nextAction && (
           <div className="mt-2.5 px-3 py-1.5 bg-blue-50 rounded-lg">
