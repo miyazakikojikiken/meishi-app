@@ -591,32 +591,6 @@ export default function CardDetailPage() {
           </Card>
 
           {/* メモ */}
-          {(contact.contactMemo || contact.note) && (
-            <Card className="rounded-2xl shadow-sm border-0 ring-1 ring-gray-100">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold text-gray-500">メモ・備考</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-3">
-                {contact.contactMemo && (
-                  <div>
-                    <p className="text-xs text-gray-400 font-medium mb-1">接点メモ</p>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-xl p-3">
-                      {contact.contactMemo}
-                    </p>
-                  </div>
-                )}
-                {contact.note && (
-                  <div>
-                    <p className="text-xs text-gray-400 font-medium mb-1">備考</p>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-xl p-3">
-                      {contact.note}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
           {/* 名刺画像 */}
           {contact.businessCards.length > 0 && (
             <Card className="rounded-2xl shadow-sm border-0 ring-1 ring-gray-100">
@@ -714,9 +688,9 @@ export default function CardDetailPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-gray-500 flex items-center gap-1.5">
                   <Clock size={14} />コンタクト履歴
-                  {contact.interactionHistories.length > 0 && (
+                  {(contact.interactionHistories.length + (contact.contactMemo ? 1 : 0)) > 0 && (
                     <span className="bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full font-normal">
-                      {contact.interactionHistories.length}
+                      {contact.interactionHistories.length + (contact.contactMemo ? 1 : 0)}
                     </span>
                   )}
                 </CardTitle>
@@ -730,7 +704,7 @@ export default function CardDetailPage() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              {contact.interactionHistories.length === 0 ? (
+              {contact.interactionHistories.length === 0 && !contact.contactMemo ? (
                 <div className="text-center py-6">
                   <Clock size={24} className="mx-auto text-gray-200 mb-2" />
                   <p className="text-xs text-gray-400">まだ履歴がありません</p>
@@ -742,10 +716,37 @@ export default function CardDetailPage() {
                   </button>
                 </div>
               ) : (
-                <div className="max-h-[500px] overflow-y-auto pr-1">
+                <div className="max-h-[600px] overflow-y-auto pr-1 space-y-0">
                   {contact.interactionHistories.map(h => (
                     <HistoryItem key={h.id} h={h} onRefresh={load} />
                   ))}
+                  {/* contactMemoをコンタクト履歴として表示 */}
+                  {contact.contactMemo && (
+                    <div className="relative pl-6 pb-4 last:pb-0">
+                      <div className="absolute left-2 top-5 bottom-0 w-px bg-gray-200 last:hidden" />
+                      <div className="absolute left-0 top-2 w-4 h-4 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                      </div>
+                      <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                        <div className="flex">
+                          <div className="w-24 shrink-0 px-3 py-4 border-r border-gray-200 space-y-3">
+                            <div>
+                              <p className="text-xs text-gray-400 mb-0.5">区分</p>
+                              <span className="inline-block text-xs px-2 py-0.5 rounded-full border font-medium bg-gray-100 text-gray-600 border-gray-200">
+                                メモ
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0 px-5 py-4">
+                            <p className="text-xs text-gray-400 mb-1">内容</p>
+                            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                              {contact.contactMemo}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

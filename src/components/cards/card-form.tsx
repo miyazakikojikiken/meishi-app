@@ -153,7 +153,7 @@ export default function CardForm({ mode, defaultValues = {}, onSubmit, loading, 
 
     try {
       const payload = Object.fromEntries(
-        Object.entries(form).filter(([, v]) => v !== '')
+        Object.entries(form).map(([k, v]) => [k, v === '' ? null : v])
       )
       await onSubmit(payload, forceCreate)
     } catch (e: unknown) {
