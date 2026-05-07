@@ -317,94 +317,121 @@ function HistoryItem({ h, onRefresh }: { h: InteractionHistory; onRefresh: () =>
   }
 
   return (
-    <div className="relative pl-6 pb-5 last:pb-0">
-      <div className="absolute left-2 top-5 bottom-0 w-px bg-gray-100 last:hidden" />
-      <div className="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center">
-        <div className="w-2 h-2 rounded-full bg-gray-400" />
+    <div className="relative pl-6 pb-4 last:pb-0">
+      <div className="absolute left-2 top-5 bottom-0 w-px bg-gray-200 last:hidden" />
+      <div className="absolute left-0 top-2 w-4 h-4 rounded-full bg-white border-2 border-blue-400 flex items-center justify-center">
+        <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
       </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold text-gray-800">{formatDate(h.contactedAt)}</span>
-            <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${cls}`}>
-              {h.interactionType}
-            </span>
-            {h.title && (
-              <span className="text-sm font-semibold text-gray-700">{h.title}</span>
-            )}
+
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* タイトルバー */}
+        {h.title && (
+          <div className="px-5 pt-4 pb-2 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="text-base font-bold text-blue-700">{h.title}</h3>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setEditing(true)}
+                className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors" title="編集">
+                <Pencil size={13} />
+              </button>
+              <button onClick={() => setDeleteConfirm(true)}
+                className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors" title="削除">
+                <Trash2 size={13} />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+        )}
+
+        {/* 2カラムレイアウト */}
+        <div className="flex">
+          {/* 左カラム：日時・区分 */}
+          <div className="w-36 shrink-0 px-4 py-4 border-r border-gray-100 space-y-3">
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">日時</p>
+              <p className="text-sm font-semibold text-gray-800">{formatDate(h.contactedAt)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">区分</p>
+              <span className={`inline-block text-xs px-2 py-0.5 rounded-full border font-medium ${cls}`}>
+                {h.interactionType}
+              </span>
+            </div>
             {h.creator && (
-              <span className="text-xs text-gray-400 mr-1">{h.creator.name}</span>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">記録者</p>
+                <p className="text-xs text-gray-600">{h.creator.name}</p>
+              </div>
             )}
-            <button onClick={() => setEditing(true)}
-              className="p-1.5 rounded hover:bg-gray-200 text-gray-400 hover:text-blue-600 transition-colors"
-              title="編集">
-              <Pencil size={13} />
-            </button>
-            <button onClick={() => setDeleteConfirm(true)}
-              className="p-1.5 rounded hover:bg-gray-200 text-gray-400 hover:text-red-500 transition-colors"
-              title="削除">
-              <Trash2 size={13} />
-            </button>
           </div>
-        </div>
 
-        {/* 詳細グリッド */}
-        <div className="px-4 py-3">
-          {(h.place || h.participants) && (
-            <div className="grid grid-cols-2 gap-3 mb-3 pb-3 border-b border-gray-100">
-              {h.place && (
-                <div>
-                  <p className="text-xs text-gray-400 mb-0.5">場所</p>
-                  <p className="text-sm text-gray-700 flex items-center gap-1">
-                    <MapPin size={11} className="text-gray-400 shrink-0" />{h.place}
-                  </p>
-                </div>
-              )}
-              {h.participants && (
-                <div>
-                  <p className="text-xs text-gray-400 mb-0.5">出席者</p>
-                  <p className="text-sm text-gray-700 flex items-center gap-1">
-                    <Users size={11} className="text-gray-400 shrink-0" />{h.participants}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {h.memo && (
-            <div className="mb-2">
-              <p className={`text-sm text-gray-600 leading-relaxed whitespace-pre-wrap ${!expanded && isLong ? 'line-clamp-4' : ''}`}>
-                {h.memo}
-              </p>
-              {isLong && (
-                <button onClick={() => setExpanded(!expanded)}
-                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-1 font-medium">
-                  {expanded ? <><ChevronUp size={12} />閉じる</> : <><ChevronDown size={12} />続きを見る</>}
+          {/* 右カラム：詳細 */}
+          <div className="flex-1 min-w-0 px-5 py-4 space-y-3">
+            {!h.title && (
+              <div className="flex justify-end gap-1">
+                <button onClick={() => setEditing(true)}
+                  className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors" title="編集">
+                  <Pencil size={13} />
                 </button>
-              )}
-            </div>
-          )}
+                <button onClick={() => setDeleteConfirm(true)}
+                  className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors" title="削除">
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            )}
 
-          {h.nextAction && (
-            <div className="mt-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-100">
-              <p className="text-xs text-blue-700 font-medium flex items-center gap-1">
-                <ChevronRight size={12} />次回アクション: {h.nextAction}
-              </p>
-            </div>
-          )}
+            {/* 場所・出席者 */}
+            {(h.place || h.participants) && (
+              <div className="grid grid-cols-2 gap-4 pb-3 border-b border-gray-100">
+                {h.place && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">場所</p>
+                    <p className="text-sm text-gray-700 flex items-center gap-1">
+                      <MapPin size={11} className="text-gray-400 shrink-0" />{h.place}
+                    </p>
+                  </div>
+                )}
+                {h.participants && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">出席者</p>
+                    <p className="text-sm text-gray-700 flex items-center gap-1">
+                      <Users size={11} className="text-gray-400 shrink-0" />{h.participants}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* メモ */}
+            {h.memo && (
+              <div>
+                <p className="text-xs text-gray-400 mb-1">メモ</p>
+                <p className={`text-sm text-gray-700 leading-relaxed whitespace-pre-wrap ${!expanded && isLong ? 'line-clamp-4' : ''}`}>
+                  {h.memo}
+                </p>
+                {isLong && (
+                  <button onClick={() => setExpanded(!expanded)}
+                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-1.5 font-medium">
+                    {expanded ? <><ChevronUp size={12} />閉じる</> : <><ChevronDown size={12} />続きを見る</>}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* 次回アクション */}
+            {h.nextAction && (
+              <div className="px-3 py-2 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-xs text-gray-400 mb-0.5">次回アクション</p>
+                <p className="text-sm text-blue-700 font-medium">{h.nextAction}</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 削除確認 */}
         {deleteConfirm && (
-          <div className="px-4 py-3 bg-red-50 border-t border-red-100 flex items-center justify-between gap-3">
+          <div className="px-5 py-3 bg-red-50 border-t border-red-100 flex items-center justify-between gap-3">
             <p className="text-sm text-red-700">このコンタクト履歴を削除しますか？</p>
             <div className="flex gap-2 shrink-0">
-              <Button size="sm" variant="outline" onClick={() => setDeleteConfirm(false)}>
-                キャンセル
-              </Button>
+              <Button size="sm" variant="outline" onClick={() => setDeleteConfirm(false)}>キャンセル</Button>
               <button onClick={handleDelete} disabled={deleting}
                 className="px-3 py-1.5 text-xs font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-1">
                 {deleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}削除
