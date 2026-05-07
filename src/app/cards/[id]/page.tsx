@@ -228,10 +228,14 @@ function HistoryItem({ h, onRefresh }: { h: InteractionHistory; onRefresh: () =>
   async function handleSave() {
     setSaving(true)
     try {
+      // 空文字はnullに変換（フィールドの削除に対応）
+      const payload = Object.fromEntries(
+        Object.entries(form).map(([k, v]) => [k, v === '' ? null : v])
+      )
       const res = await fetch(`/api/interactions/${h.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('保存失敗')
       setEditing(false)
