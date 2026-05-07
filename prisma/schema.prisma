@@ -217,6 +217,7 @@ model InteractionHistory {
   title           String?
   place           String?
   memo            String?
+  participants    String?   @map("participants")
   nextAction      String?   @map("next_action")
   status          String?
   createdBy       String?   @map("created_by")

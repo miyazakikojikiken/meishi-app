@@ -19,6 +19,7 @@ interface InteractionHistory {
   interactionType: string
   title: string | null
   place: string | null
+  participants: string | null
   memo: string | null
   nextAction: string | null
   status: string | null
@@ -86,7 +87,7 @@ function AddInteractionModal({
   const [form, setForm] = useState({
     contactedAt: new Date().toISOString().slice(0, 10),
     interactionType: '商談',
-    title: '', place: '', memo: '', nextAction: '', status: '',
+    title: '', place: '', memo: '', participants: '', nextAction: '', status: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -148,6 +149,12 @@ function AddInteractionModal({
             <input type="text" value={form.place}
               onChange={e => setForm(p => ({ ...p, place: e.target.value }))}
               placeholder="先方オフィス / オンライン" className={inputClass} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">出席者</label>
+            <input type="text" value={form.participants}
+              onChange={e => setForm(p => ({ ...p, participants: e.target.value }))}
+              placeholder="例：山田部長、田中さん" className={inputClass} />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-gray-600">内容・メモ</label>
@@ -230,6 +237,11 @@ function HistoryItem({ h }: { h: InteractionHistory }) {
         {h.place && (
           <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
             <MapPin size={10} />{h.place}
+          </p>
+        )}
+        {h.participants && (
+          <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+            <span className="font-medium text-gray-400">出席者:</span> {h.participants}
           </p>
         )}
         {h.memo && (
