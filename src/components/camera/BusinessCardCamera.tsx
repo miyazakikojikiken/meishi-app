@@ -1,113 +1,151 @@
 'use client'
+import { useState } from 'react'
+import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, ScanLine, Loader2, Info, Camera } from 'lucide-react'
+const BusinessCardCamera = dynamic(() => import('@/components/camera/BusinessCardCamera'), { ssr: false })
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/index'
+import FileUploader from '@/components/ocr/file-uploader'
 
-import { useRef, useEffect, useState, useCallback } from 'react'
-import { RotateCcw, ZapOff, CheckCircle } from 'lucide-react'
+export default function OcrUploadPage() {
+  const router = useRouter()
+  const [frontFile, setFrontFile] = useState<File | null>(null)
+  const [backFile, setBackFile] = useState<File | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [showCamera, setShowCamera] = useState(false)
+  const [cameraTarget, setCameraTarget] = useState<'front' | 'back'>('front')
 
-interface Props {
-  onCapture: (file: File) => void
-  onClose: () => void
-}
+  function openCamera(target: 'front' | 'back') {
+    setCameraTarget(target)
+    setShowCamera(true)
+  }
 
-export default function BusinessCardCamera({ onCapture, onClose }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const [ready, setReady] = useState(false)
-  const [captured, setCaptured] = useState(false)
-  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
-
-  const startCamera = useCallback(async () => {
-    try {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop())
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play()
-          setReady(true)
-        }
-      }
-    } catch (e) {
-      console.error('Camera error:', e)
+  function handleCameraCapture(file: File) {
+    if (cameraTarget === 'front') {
+      setFrontFile(file)
+    } else {
+      setBackFile(file)
     }
-  }, [facingMode])
+    setShowCamera(false)
+  }
 
-  useEffect(() => {
-    startCamera()
-    return () => { streamRef.current?.getTracks().forEach(t => t.stop()) }
-  }, [startCamera])
+  async function handleOcr() {
+    if (!frontFile && !backFile) return
+    setLoading(true)
+    setError('')
+    try {
+      const formData = new FormData()
+      if (frontFile) formData.append('front', frontFile)
+      if (backFile) formData.append('back', backFile)
+      const res = await fetch('/api/ocr', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'OCRエラー')
+      router.push(`/cards/ocr/${data.jobId}`)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'エラーが発生しました')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const capture = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    const ctx = canvas.getContext('2d')!
-    ctx.drawImage(video, 0, 0)
-    setCaptured(true)
-    canvas.toBlob(blob => {
-      if (!blob) return
-      const file = new File([blob], 'card.jpg', { type: 'image/jpeg' })
-      setTimeout(() => onCapture(file), 600)
-    }, 'image/jpeg', 0.95)
-  }, [onCapture])
-
-  const toggleCamera = useCallback(() => {
-    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment')
-    setReady(false)
-  }, [])
+  if (showCamera) {
+    return (
+      <BusinessCardCamera
+        onCapture={handleCameraCapture}
+        onClose={() => setShowCamera(false)}
+      />
+    )
+  }
 
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      <div className="flex items-center justify-between p-4 text-white">
-        <button onClick={onClose} className="text-white text-sm px-3 py-1 border border-white rounded-full">
-          キャンセル
-        </button>
-        <span className="text-sm font-medium">名刺を枠に合わせてください</span>
-        <button onClick={toggleCamera} className="text-white p-1">
-          <RotateCcw size={22} />
-        </button>
-      </div>
-
-      <div className="flex-1 relative overflow-hidden">
-        <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
-        <canvas ref={canvasRef} className="hidden" />
-
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="absolute inset-0 bg-black/50" />
-          <div
-            className={`relative z-10 border-2 rounded-lg transition-colors duration-300 ${captured ? 'border-green-400' : 'border-white'}`}
-            style={{ width: '88vw', height: '56vw', maxWidth: 500, maxHeight: 310 }}
-          >
-            <div className={`absolute top-0 left-0 w-7 h-7 border-t-4 border-l-4 rounded-tl ${captured ? 'border-green-400' : 'border-white'}`} />
-            <div className={`absolute top-0 right-0 w-7 h-7 border-t-4 border-r-4 rounded-tr ${captured ? 'border-green-400' : 'border-white'}`} />
-            <div className={`absolute bottom-0 left-0 w-7 h-7 border-b-4 border-l-4 rounded-bl ${captured ? 'border-green-400' : 'border-white'}`} />
-            <div className={`absolute bottom-0 right-0 w-7 h-7 border-b-4 border-r-4 rounded-br ${captured ? 'border-green-400' : 'border-white'}`} />
-            {captured && (
-              <div className="absolute inset-0 flex items-center justify-center bg-green-400/20 rounded-lg">
-                <CheckCircle size={56} className="text-green-400" />
-              </div>
-            )}
+    <div className="max-w-lg mx-auto p-4">
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
+      >
+        <ArrowLeft size={16} />
+        戻る
+      </button>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ScanLine size={20} />
+            名刺OCR読み取り
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-700 flex gap-2">
+            <Info size={16} className="mt-0.5 shrink-0" />
+            <span>名刺の表面・裏面を撮影またはアップロードしてください。AIが自動で情報を読み取ります。</span>
           </div>
-        </div>
-      </div>
 
-      <div className="pb-12 pt-6 flex flex-col items-center gap-4">
-        <p className="text-white/70 text-xs">名刺全体が枠に収まるように合わせてください</p>
-        <button
-          onClick={capture}
-          disabled={!ready || captured}
-          className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center disabled:opacity-40 active:scale-90 transition-transform"
-        >
-          <div className="w-14 h-14 rounded-full bg-white" />
-        </button>
-      </div>
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium mb-1">表面</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => openCamera('front')}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
+                >
+                  <Camera size={14} />
+                  撮影
+                </button>
+                <FileUploader onFileSelect={setFrontFile} label="ファイル選択" />
+              </div>
+              {frontFile && (
+                <p className="text-xs text-green-600 mt-1">
+                  {frontFile.name}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <p className="text-sm font-medium mb-1">裏面（任意）</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => openCamera('back')}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
+                >
+                  <Camera size={14} />
+                  撮影
+                </button>
+                <FileUploader onFileSelect={setBackFile} label="ファイル選択" />
+              </div>
+              {backFile && (
+                <p className="text-xs text-green-600 mt-1">
+                  {backFile.name}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+              {error}
+            </div>
+          )}
+
+          <Button
+            onClick={handleOcr}
+            disabled={loading || (!frontFile && !backFile)}
+            className="w-full"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={16} className="mr-2 animate-spin" />
+                OCR実行中...（しばらくお待ちください）
+              </>
+            ) : (
+              <>
+                <ScanLine size={16} className="mr-2" />
+                OCR実行
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }
