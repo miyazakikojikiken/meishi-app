@@ -32,83 +32,95 @@ export default function OcrUploadPage() {
   }
 
   async function handleOcr() {
-    if (!frontFile && !backFile) {
-      setError('名刺画像をアップロードしてください')
-      return
-    }
+    if (!frontFile && !backFile) return
     setLoading(true)
     setError('')
-
     try {
       const formData = new FormData()
       if (frontFile) formData.append('front', frontFile)
       if (backFile) formData.append('back', backFile)
-
-      const res = await fetch('/api/cards/ocr/upload', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'OCR実行に失敗しました')
-
-      router.push(`/cards/ocr/${json.data.jobId}/review`)
+      const res = await fetch('/api/ocr', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'OCRエラー')
+      router.push(`/cards/ocr/${data.jobId}`)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'エラーが発生しました')
+    } finally {
       setLoading(false)
     }
   }
 
-  return (
-    <>
-    {showCamera && (
+  if (showCamera) {
+    return (
       <BusinessCardCamera
+        target={cameraTarget}
         onCapture={handleCameraCapture}
         onClose={() => setShowCamera(false)}
       />
-    )}
-    <div className="max-w-2xl mx-auto space-y-4">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.back()}
-          className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <h1 className="text-2xl font-bold text-gray-900">名刺OCR取り込み</h1>
-      </div>
+    )
+  }
 
-      {/* ガイド */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
-        <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
-        <div className="text-sm text-blue-800 space-y-1">
-          <p className="font-medium">OCR取り込みの流れ</p>
-          <ol className="list-decimal list-inside space-y-0.5 text-blue-700">
-            <li>名刺の表面（必須）と裏面（任意）をアップロード</li>
-            <li>OCR実行ボタンをクリック</li>
-            <li>抽出結果を確認・修正して登録</li>
-          </ol>
-          <p className="text-xs text-blue-600 mt-1">
-            ※ GOOGLE_VISION_API_KEY 未設定時はダミーデータで動作確認できます
-          </p>
-        </div>
-      </div>
-
+  return (
+    <div className="max-w-lg mx-auto p-4">
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
+      >
+        <ArrowLeft size={16} />
+        戻る
+      </button>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">名刺画像のアップロード</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <ScanLine size={20} />
+            名刺OCR読み取り
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-5">
-          <FileUploader
-            label="表面（必須）"
-            file={frontFile}
-            onFileChange={setFrontFile}
-          />
-          <FileUploader
-            label="裏面（任意）"
-            file={backFile}
-            onFileChange={setBackFile}
-          />
+        <CardContent className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-700 flex gap-2">
+            <Info size={16} className="mt-0.5 shrink-0" />
+            <span>名刺の表面・裏面を撮影またはアップロードしてください。AIが自動で情報を読み取ります。</span>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium mb-1">表面</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => openCamera('front')}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
+                >
+                  <Camera size={14} />
+                  撮影
+                </button>
+                <FileUploader onFileSelect={setFrontFile} label="ファイル選択" />
+              </div>
+              {frontFile && (
+                <p className="text-xs text-green-600 mt-1">
+                  {frontFile.name}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <p className="text-sm font-medium mb-1">裏面（任意）</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => openCamera('back')}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
+                >
+                  <Camera size={14} />
+                  撮影
+                </button>
+                <FileUploader onFileSelect={setBackFile} label="ファイル選択" />
+              </div>
+              {backFile && (
+                <p className="text-xs text-green-600 mt-1">
+                  {backFile.name}
+                </p>
+              )}
+            </div>
+          </div>
 
           {error && (
             <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
