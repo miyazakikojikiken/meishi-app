@@ -1,7 +1,9 @@
 'use client'
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ScanLine, Loader2, Info } from 'lucide-react'
+import { ArrowLeft, ScanLine, Loader2, Info, Camera } from 'lucide-react'
+const BusinessCardCamera = dynamic(() => import('@/components/camera/BusinessCardCamera'), { ssr: false })
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/index'
 import FileUploader from '@/components/ocr/file-uploader'
@@ -12,6 +14,22 @@ export default function OcrUploadPage() {
   const [backFile, setBackFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showCamera, setShowCamera] = useState(false)
+  const [cameraTarget, setCameraTarget] = useState<'front' | 'back'>('front')
+
+  function openCamera(target: 'front' | 'back') {
+    setCameraTarget(target)
+    setShowCamera(true)
+  }
+
+  function handleCameraCapture(file: File) {
+    if (cameraTarget === 'front') {
+      setFrontFile(file)
+    } else {
+      setBackFile(file)
+    }
+    setShowCamera(false)
+  }
 
   async function handleOcr() {
     if (!frontFile && !backFile) {
@@ -42,6 +60,13 @@ export default function OcrUploadPage() {
   }
 
   return (
+    <>
+    {showCamera && (
+      <BusinessCardCamera
+        onCapture={handleCameraCapture}
+        onClose={() => setShowCamera(false)}
+      />
+    )}
     <div className="max-w-2xl mx-auto space-y-4">
       <div className="flex items-center gap-3">
         <button
