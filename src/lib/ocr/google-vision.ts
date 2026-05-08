@@ -5,6 +5,7 @@
 
 import { db } from '@/lib/db'
 import { saveFile } from '@/lib/storage'
+import { convertToJpeg } from '@/lib/heic-convert'
 import type { OcrExtractedFields, OcrConfidenceScores } from '@/types'
 
 export interface OcrProvider {
@@ -378,7 +379,7 @@ export async function runOcrJob(
       const provider = new GoogleVisionProvider(apiKey)
 
       if (frontFile) {
-        const buf = Buffer.from(await frontFile.arrayBuffer())
+        const buf = await convertToJpeg(Buffer.from(await frontFile.arrayBuffer()))
         frontPath = await saveFile(buf, frontFile.name, 'ocr')
         const result = await provider.extractWithLayout(buf)
         combinedText += result.rawText + '\n'
@@ -386,7 +387,7 @@ export async function runOcrJob(
       }
 
       if (backFile) {
-        const buf = Buffer.from(await backFile.arrayBuffer())
+        const buf = await convertToJpeg(Buffer.from(await backFile.arrayBuffer()))
         backPath = await saveFile(buf, backFile.name, 'ocr')
         const result = await provider.extractWithLayout(buf)
         combinedText += result.rawText + '\n'
@@ -395,11 +396,11 @@ export async function runOcrJob(
     }
 
     if (frontFile && !frontPath) {
-      const buf = Buffer.from(await frontFile.arrayBuffer())
+      const buf = await convertToJpeg(Buffer.from(await frontFile.arrayBuffer()))
       frontPath = await saveFile(buf, frontFile.name, 'ocr')
     }
     if (backFile && !backPath) {
-      const buf = Buffer.from(await backFile.arrayBuffer())
+      const buf = await convertToJpeg(Buffer.from(await backFile.arrayBuffer()))
       backPath = await saveFile(buf, backFile.name, 'ocr')
     }
 
